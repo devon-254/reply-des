@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reply Desk — Assistant</title>
+  <style>
+    :root{
+      --bg:#190816;
+      --card:#2b1020;
+      --accent:#ff4da6;
+      --accent-2:#ff9ad6;
+      --muted:#ffdfee;
+      --primary:#ff4da6;
+      --primary-2:#ff9ad6;
+      --glass:rgba(255,255,255,0.03);
+      --glass-2:rgba(255,255,255,0.02);
+    }
+
+    html,body{height:100%;margin:0;background:radial-gradient(1000px 500px at 10% 8%, rgba(255,77,166,0.06), transparent 12%), linear-gradient(180deg,var(--bg) 0%, #2a0e1a 70%);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;color:#fff5fb;-webkit-font-smoothing:antialiased}
+
+    .wrap{max-width:1100px;margin:20px auto;padding:18px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    h1{margin:0;font-size:1.55rem;letter-spacing:-0.02em}
+    .controls{display:flex;gap:8px;align-items:center}
+
+    input[type=text], input[type=password]{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);background:linear-gradient(180deg,var(--glass),var(--glass-2));color:inherit;outline:none}
+    input[type=text]:focus, input[type=password]:focus{box-shadow:0 6px 20px rgba(0,0,0,0.6), 0 0 0 4px rgba(255,77,166,0.08)}
+
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border:1px solid rgba(255,255,255,0.04);padding:18px;border-radius:16px;margin-top:16px;box-shadow:0 6px 30px rgba(30,10,20,0.6);transition:transform .18s ease}
+    .layout{display:grid;grid-template-columns:1fr 420px;gap:16px}
+    .chat{height:560px;display:flex;flex-direction:column}
+
+    .messages{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+    .messages::-webkit-scrollbar{width:10px;height:10px}
+    .messages::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--primary),var(--primary-2));border-radius:10px}
+
+    .msg{max-width:78%;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.02);position:relative;opacity:0;transform:translateY(12px) scale(.92);transition:opacity .28s cubic-bezier(.2,.9,.2,1), transform .28s cubic-bezier(.2,.9,.2,1);word-break:break-word}
+    .msg .meta{display:flex;gap:8px;align-items:center;font-size:0.78rem;color:var(--muted);margin-bottom:6px}
+    .msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#2a0614}
+    .msg.ai{align-self:flex-start;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border:1px solid rgba(255,255,255,0.03)}
+
+    .avatar{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+    .avatar.ai{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#2a0614;box-shadow:0 6px 18px rgba(255,77,166,0.16);}
+    .avatar.user{background:linear-gradient(135deg,#fff9, #ffffff66);color:#081012}
+
+    .composer{display:flex;gap:8px;margin-top:12px}
+    .composer textarea{flex:1;min-height:56px;border-radius:10px;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.05);color:inherit;resize:vertical}
+    .composer textarea:focus{box-shadow:0 10px 30px rgba(0,0,0,0.6), 0 0 0 4px rgba(255,77,166,0.06)}
+
+    button{border:0;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;transition:transform .12s ease, box-shadow .12s ease}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#2a0614;box-shadow:0 8px 24px rgba(255,77,166,0.12)}
+    .btn-primary:hover{transform:translateY(-3px);box-shadow:0 16px 36px rgba(255,77,166,0.18)}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,165,200,0.08);color:var(--muted)}
+    .btn-ghost:hover{background:rgba(255,255,255,0.02);transform:translateY(-2px)}
+
+    .features{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+    .feature-btn{padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));border:1px solid rgba(255,255,255,0.03);cursor:pointer;text-align:left}
+    .feature-btn:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 14px 40px rgba(255,77,166,0.12)}
+    .feature-btn:focus{outline:2px solid rgba(255,77,166,0.08)}
+
+    .small{font-size:0.85rem;color:var(--muted)}
+    .response-preview{white-space:pre-wrap;font-family:ui-monospace,monospace;background:rgba(0,0,0,0.14);padding:10px;border-radius:8px;margin-top:8px}
+    footer{margin-top:12px;color:var(--muted);font-size:0.9rem}
+
+    @media (max-width:1000px){.layout{grid-template-columns:1fr}.chat{height:520px}}
+    @media (max-width:600px){h1{font-size:1.25rem}.controls{flex-direction:column;align-items:flex-end} .panel{padding:14px}}
+
+    /* visibility helper with pop animation */
+    @keyframes popIn {
+      0% { transform: translateY(18px) scale(0.86); opacity: 0 }
+      60% { transform: translateY(-6px) scale(1.06); opacity: 1 }
+      100% { transform: translateY(0) scale(1); opacity: 1 }
+    }
+    .msg.visible{opacity:1;transform:none;animation:popIn .5s cubic-bezier(.2,.9,.25,1)}
+    .msg.user.visible{box-shadow:0 18px 40px rgba(255,77,166,0.12)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div style="display:flex;align-items:center;gap:12px">
+        <img src="assets/logo.svg" alt="Reply Desk logo" width="44" height="44" style="display:block" />
+        <h1>Reply Desk</h1>
+      </div>
+      <div class="controls">
+        <input id="apiKey" type="password" placeholder="OpenAI API key (optional)" style="width:260px" />
+        <input id="proxyUrl" type="text" placeholder="Proxy URL (e.g. http://localhost:3000)" style="width:260px" />
+        <label style="display:flex;align-items:center;gap:6px"><input id="useProxy" type="checkbox" /> Use proxy</label>
+        <button id="clearKey" class="btn-ghost">Clear</button>
+      </div>
+    </header>
+
+    <div class="panel layout">
+      <div>
+        <div class="chat">
+          <div id="messages" class="messages" aria-live="polite"></div>
+
+          <div class="composer" aria-label="Message composer">
+            <textarea id="userInput" placeholder="Ask the assistant or pick a feature..."></textarea>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button id="sendMessage" class="btn-primary">Send</button>
+              <button id="clearChat" class="btn-ghost">Clear</button>
+            </div>
+          </div>
+
+          <div class="features" style="margin-top:10px">
+            <button class="feature-btn" data-feature="answerEmail">Answer email</button>
+            <button class="feature-btn" data-feature="generateReport">Generate report</button>
+            <button class="feature-btn" data-feature="summarizeMeeting">Summarize meeting</button>
+            <button class="feature-btn" data-feature="manageSchedule">Manage schedule</button>
+            <button class="feature-btn" data-feature="createContent">Create content</button>
+            <button class="feature-btn" data-feature="analyzeDocument">Analyze document</button>
+            <button class="feature-btn" data-feature="automateSupport">Automate support</button>
+            <button class="feature-btn" data-feature="manageLeads">Manage leads</button>
+          </div>
+
+        </div>
+      </div>
+
+      <aside>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Last response</strong>
+          <span class="small">Model: <select id="modelSelect"><option>gpt-3.5-turbo</option></select></span>
+        </div>
+        <div id="lastResponse" class="response-preview">No response yet.</div>
+
+        <div style="margin-top:12px">
+          <strong>Feature preview</strong>
+          <div id="featurePrompt" class="small" style="margin-top:8px;color:var(--muted)">Pick a feature to load a prompt template.</div>
+        </div>
+
+        <div style="margin-top:12px">
+          <strong>Options</strong>
+          <div class="small" style="margin-top:8px;color:var(--muted)">Use the API key for real AI access, or run the local Reply Desk proxy at <code>http://localhost:3000</code>.</div>
+        </div>
+
+      </aside>
+    </div>
+
+    <footer>
+      Reply Desk prototype — responses use your API key if provided. For production, proxy API calls server-side for security.
+    </footer>
+  </div>
+
+  <script src="reply-desk.js"></script>
+</body>
+</html>
